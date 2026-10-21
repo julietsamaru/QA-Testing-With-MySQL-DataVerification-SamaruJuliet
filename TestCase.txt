@@ -1,0 +1,96 @@
+TestCase.txt
+
+Test Case ID: TC-DataEntry-001
+Test Case Title: Data Entry - Valid
+Test Case Description: Functional Testing of Data Entry page with Backend validation using MySQL queries.
+Tester: Juliet Samaru
+Date executed: October 21, 2026
+Preconditions: Kara David Birthday Wishnote App is installed locally (Ubuntu, Apache 2.4.66, PHP 8.5, MariaDB 11.8) and the birthday_wishnote database and main_corrupt_politicians table were created before testing. The table was empty at the start. Data entry page is accessed in the Chrome browser.
+Test Data: Five (5) valid entries containing First Name, Last Name, Government Position, and Location, all within their maximum character limits (30 / 30 / 20 / 40).
+
+  No. | FirstName | LastName  | GovPosition | Location
+  1   | Juliet    | Samaru    | Secretary   | Bacolod City
+  2   | lylia     | gigi      | councilor   | talisay
+  3   | alex      | testone   | mayor       | Test City Alpha
+  4   | Bea       | testtwo   | councilor   | Test City Beta
+  5   | Casey     | testthree | governor    | Test Province Gamma
+
+Test Steps:
+a. Verify that the form contains labels in proper order and the text boxes are writable
+b. Verify the "Send Wish Note" button.
+c. Enter test data on their respective fields
+d. On clicking of "Send Wish Note" button, a modal will appear.
+e. Verify if the modal contains the same entry as your test data
+f. Click the Cancel button
+g. Click again on "Send Wish Note" button, and click on "Confirm and Send" button in the modal box.
+h. Verify if a successful entry message shows in the Data Entry page.
+i. Verify the test data if it shows in the database.
+
+Expected Results:
+a. The form contains labels in this order: "Target's First Name", "Target's Last Name", "Target's Government Position", and "Target's Location"; all text boxes are writable
+b. The "Send Wish Note" button changes color on hover and is not disabled
+c. The respective fields accept data entries of valid test data.
+d. A centered modal titled "Verify Target Data" appears.
+e. The modal shows the same four values as the test data, including Location.
+f. The modal closes, the entered values remain in the form, and no row is added to the database.
+g. The form is submitted and exactly one new row is added for each submission.
+h. The message "Success! The wish note has been sent." appears on the Data Entry page.
+i. Each submitted entry appears in the database with matching FirstName, LastName, GovPosition and Location.
+
+Actual results:
+a. The form contains labels in this order: "Target's First Name", "Target's Last Name", "Target's Government Position", and "Target's Location"; all text boxes are writable.
+b. The "Send Wish Note" button changes color on hover and is not disabled.
+c. The respective fields accepted all five valid test entries.
+d. A centered modal titled "Verify Target Data" appeared.
+e. For the entries checked in the modal (Juliet Samaru and lylia gigi), the modal showed the same four values as the test data, including Location (Bacolod City and talisay).
+f. After clicking Cancel, the modal closed and the entered values stayed in the form. The row count was 2 before Cancel and 2 after.
+g. Confirm & Send submitted the form. The row count grew by one for each submission, from 0 to 5.
+h. The message "Success! The wish note has been sent." appeared.
+i. FAILED. All five rows were saved, but the Location column is NULL in every row. FirstName, LastName and GovPosition match the test data.
+
+Status: Failed
+
+6i - SQL commands used to verify the data
+At the Ubuntu shell:
+  sudo mysql -u root
+
+At the database prompt:
+  USE birthday_wishnote;
+  SELECT * FROM main_corrupt_politicians;
+
+For the Cancel check (run before and after clicking Cancel):
+  SELECT COUNT(*) AS total_rows FROM main_corrupt_politicians;
+
+7i - Expected database result
+Five rows, one for each submitted entry, with all four values matching the test data:
+
+  id | FirstName | LastName  | GovPosition | Location
+  1  | Juliet    | Samaru    | Secretary   | Bacolod City
+  2  | lylia     | gigi      | councilor   | talisay
+  3  | alex      | testone   | mayor       | Test City Alpha
+  4  | Bea       | testtwo   | councilor   | Test City Beta
+  5  | Casey     | testthree | governor    | Test Province Gamma
+
+8i - Actual database result
+  +----+-----------+-----------+-------------+----------+
+  | id | FirstName | LastName  | GovPosition | Location |
+  +----+-----------+-----------+-------------+----------+
+  |  1 | Juliet    | Samaru    | Secretary   | NULL     |
+  |  2 | lylia     | gigi      | councilor   | NULL     |
+  |  3 | alex      | testone   | mayor       | NULL     |
+  |  4 | Bea       | testtwo   | councilor   | NULL     |
+  |  5 | Casey     | testthree | governor    | NULL     |
+  +----+-----------+-----------+-------------+----------+
+
+Comparison: the first three values match in all five rows, but Location is NULL in every row. The defect appeared in 5 of 5 runs.
+
+Defect record
+ID: BUG-001
+Title: Submitted Location is not saved to the database.
+Affected field: main_corrupt_politicians.Location
+Severity: Medium (data is lost, and the user still sees a success message)
+Steps to reproduce: Enter a value in Location, click Send Wish Note, click Confirm & Send, then query the table.
+Expected: The Location value is stored.
+Actual: Location is NULL.
+Cause: The INSERT statement leaves out the Location column and the matching placeholder and bind_param value, so only FirstName, LastName and GovPosition are inserted.
+Suggested fix: Add Location to the INSERT column list, add a fourth ? placeholder, and bind four string values including $Location.
