@@ -1,0 +1,143 @@
+QA Testing With MySQL Data Verification
+
+Repository contents
+A. readme.md: repository overview and formatted test case.
+B. webapp-generation-prompt.txt: original application generation prompt.
+C. test-webapp.php: single-file PHP application with an intentional insertion flaw.
+Supplement: setup.sql creates a local schema and one fictional baseline row.
+The assignment also mentions textcase.txt; the supplied test document is saved as TestCase.txt.
+
+Test Case ID: TC-DataEntry-001
+Test Case Title: Data Entry - Valid
+Test Case Description: Functional testing of the Data Entry page with backend validation using MySQL queries.
+Preconditions: App installed locally; MariaDB running; birthday_wishnote database and main_corrupt_politicians table prepared; baseline recorded; latest available Chrome/Firefox browser used; JavaScript enabled.
+Execution environment: Phone browser displaying localhost and MariaDB terminal, documented in user-supplied screenshots. Device, browser, Ubuntu, PHP, and MariaDB versions not supplied.
+Execution date / tester: Not supplied. Evidence compiled on 12 October 2026.
+Status: Failed (Location mismatch across all five submitted records). Rows 2-3 have preview evidence; entered locations for rows 4-6 are tester-reported. A separate cancellation rerun passed: count remained 6 and inputs were retained.
+
+Originally Suggested Test Data: These fictional examples were not the actual submitted set. Actual observed records are documented below.
+ID | FirstName | LastName | GovPosition | Location
+QA001 | Alex | TestOne | Test Mayor | Test City Alpha
+QA002 | Bea | TestTwo | Test Councilor | Test City Beta
+QA003 | Casey | TestThree | Test Governor | Test Province Gamma
+QA004 | Dani | TestFour | Test Secretary | Test District Delta
+QA005 | Eli | TestFive | Test Treasurer | Test Town Epsilon
+All values fit the specified 30 / 30 / 20 / 40 character limits.
+Repeat steps c through i for each entry. Record observations and query evidence for each run.
+
+Observed record from the supplied screenshots
+FirstName: Cyrus Bryen
+LastName: lim
+GovPosition: single
+Location entered / previewed: silay
+Database row id: 2
+Database Location: NULL
+These strings fit the length limits, but "single" is not a government position. This exploratory record demonstrates the persistence flaw; use the planned fictional positions for the required valid-data runs. The assignment-defined table name is not an allegation about the person named in this record.
+
+Additional observed form/modal record (now persisted as database row id 3)
+FirstName: test
+LastName: Test
+GovPosition: Test
+Location: Test
+All four values match between evidence/form-success.png and evidence/modal-test-record.png. The latest database screenshot stores the first three values as row id 3 but Location is NULL instead of Test.
+
+Actual five submitted records from evidence/database-five-submissions.png
+id | FirstName | LastName | GovPosition | Entered Location | Stored Location
+2 | Cyrus Bryen | lim | single | silay | NULL
+3 | test | Test | Test | Test | NULL
+4 | Alex | t1 | Test Mayor | silay (tester-reported) | NULL
+5 | Hello | Hii | Ambot | bcd (tester-reported) | NULL
+6 | Cassie | Wala | Secretary | ambot (tester-reported) | NULL
+All stored first names, last names, and positions fit the character limits. The app accepts these positions as nonempty text; some differ from meaningful fictional government positions. All entered locations also fit the character limit.
+Tester clarification: Alex used silay; Hello used bcd; Cassie used ambot. These are literal values, superseding the earlier general answer of silay and bacolod. The final three expected Locations are supported by the tester's statement, not preview screenshots.
+
+Test Steps
+a. Verify that labels appear in the specified order and every text box is writable.
+b. Verify that the Send Wish Note button is enabled and changes color on hover on a device with a pointer. Record hover as not applicable on a touch-only phone.
+c. Enter one test record into its corresponding fields.
+d. Click Send Wish Note and inspect the modal.
+e. Compare all four modal values against the test record, including Location.
+f. Click Cancel. Check that the modal closes, values remain, and the database row count is unchanged.
+g. Click Send Wish Note again, then Confirm & Send (the prompt's label for Confirm and Send).
+h. Verify that the Data Entry page displays the exact success message.
+i. Log in to MariaDB, select birthday_wishnote, and display every row from main_corrupt_politicians. Compare all four stored values with the test record.
+
+Expected Results (the intended correct behavior)
+a. Labels appear in this order: Target's First Name; Target's Last Name; Target's Government Position; Target's Location. All text boxes are writable.
+b. Send Wish Note is enabled and changes color on pointer hover.
+c. The fields accept valid data within their character limits.
+d. A centered modal opens with the heading Verify Target Data.
+e. All four values match the entered record exactly, including Location.
+f. The modal closes without inserting a row; entered values remain available.
+g. Confirmation submits the POST request and creates exactly one new row.
+h. Success! The wish note has been sent.
+i. One new row contains matching FirstName, LastName, GovPosition, and Location.
+
+Actual Results
+a. Observed: the populated form shows all four labels in the correct order and values in all four inputs.
+b. The Send Wish Note button is displayed and modal opening is evidenced. Hover remains unverified; on a touch-only device it is not applicable.
+c. Five submitted records are evidenced as rows 2-6. Form/modal evidence includes test / Test / Test / Test within the limits. The tester reports silay / bcd / ambot for the final three Locations; these fit the limit.
+d. Observed: the centered modal is displayed with the heading Verify Target Data.
+e. Passed for the supplied second preview: test / Test / Test / Test matches between the form and modal, including Location.
+f. Passed for the separate cancellation rerun. The closed-modal form retains cancel / check / Test mayor / silay. The count is 6 before and 6 after, with no net row-count change. Earlier counts of 2 had uncertain timing and are not the basis of this result.
+g. The latest query shows five submitted records, ids 2-6, plus baseline id 1. The confirmation sequence and row-count increase for each individual submission were not independently captured.
+h. Passed for message display: evidence/success-message.png and evidence/form-success.png show Success! The wish note has been sent. Attribution to a particular submission is not established; the same message is already visible behind the second modal.
+i. Failed. All five submitted rows have Location=NULL instead of silay / Test / silay / bcd / ambot for ids 2-6 respectively. The final three expected values are tester-reported. Latest SELECT output contains 6 rows: baseline plus five submitted records.
+Evidence: evidence/modal-preview.png, evidence/database-results.png, evidence/form-success.png, evidence/modal-test-record.png, evidence/cancellation-counts.png, evidence/success-message.png, evidence/database-five-submissions.png, evidence/cancel-rerun-form.png, and evidence/cancel-rerun-counts.png.
+Five submitted records and all entered Locations are documented. Cancellation passed in a separate rerun; other unobserved repeated UI checks remain unverified.
+
+6i - SQL commands / verification procedure
+At the Ubuntu shell:
+mysql -u root
+
+At the database prompt:
+USE birthday_wishnote;
+SELECT * FROM main_corrupt_politicians;
+
+For a baseline and cancellation check, run before entry and after Cancel:
+SELECT COUNT(*) AS total_rows FROM main_corrupt_politicians;
+
+7i - Expected database result
+After confirmation, exactly one additional row exists and all four fields match the submitted test record. Repeat for all five entries; the total should grow by five from the baseline, with no additional rows from Cancel.
+
+8i - Actual database result
+Transcribed from evidence/database-results.png (the phone terminal wraps column names across lines):
+
+id | FirstName | LastName | GovPosition | Location
+1 | Baseline | QARecord | Test Position | Test Location
+2 | Cyrus Bryen | lim | single | NULL
+
+SELECT * FROM main_corrupt_politicians;
+Result: 2 rows in set (0.007 sec).
+
+SELECT COUNT(*) AS total_rows FROM main_corrupt_politicians;
+Result: total_rows = 2; 1 row in set (0.002 sec).
+
+Comparison: the modal displays Location=silay, but the submitted database row stores NULL. Step i fails for this observed record.
+
+Latest complete query result from evidence/database-five-submissions.png:
+id | FirstName | LastName | GovPosition | Location
+1 | Baseline | QARecord | Test Position | Test Location
+2 | Cyrus Bryen | lim | single | NULL
+3 | test | Test | Test | NULL
+4 | Alex | t1 | Test Mayor | NULL
+5 | Hello | Hii | Ambot | NULL
+6 | Cassie | Wala | Secretary | NULL
+SELECT * FROM main_corrupt_politicians;
+Result: 6 rows in set (0.001 sec).
+This shows one baseline row plus five submitted records. All submitted Locations are NULL. Expected Locations for ids 2-3 are silay and Test, supported by previews. The tester reports silay, bcd, and ambot for ids 4-6 respectively. All five submitted Locations mismatch the stored values.
+
+Earlier count evidence: evidence/cancellation-counts.png shows the count query twice, each returning total_rows=2 (0.001 sec and 0.003 sec). The tester is unsure whether these were taken before/after Cancel; these earlier checks do not establish cancellation behavior.
+
+Dedicated cancellation rerun: the tester supplied screenshots after the prescribed before-count / enter record / open modal / Cancel / retained-form / after-count procedure. evidence/cancel-rerun-form.png shows cancel / check / Test mayor / silay retained with the modal closed. evidence/cancel-rerun-counts.png shows total_rows=6 before (0.024 sec) and total_rows=6 after (0.001 sec). Step f passed for this rerun. The existing success banner is not evidence that the cancellation record was submitted.
+Additional UI evidence: form-success.png displays the exact success message and test / Test / Test / Test. modal-test-record.png shows the same values in the modal, with the existing success message in the background. The latest database output shows this record as id 3, with Location NULL.
+
+Confirmed defect from source inspection and supplied live evidence
+Location is intentionally omitted from the INSERT and bind_param in test-webapp.php. Previews show silay and Test for ids 2-3; the tester reports silay, bcd, and ambot for ids 4-6. The database stores NULL for all five, documenting five mismatches with preview evidence for the first two.
+
+Defect record
+ID: BUG-001
+Title: Submitted Location is omitted from the database insertion.
+Affected field: main_corrupt_politicians.Location
+Evidence basis: Source inspection, user-supplied form/modal/database screenshots, and tester-reported expected Locations for ids 4-6. Five mismatches documented. Separate cancellation evidence confirms retained inputs and unchanged count of 6.
+Suggested correction after the exercise: Add Location to the INSERT column list, add the fourth placeholder, and bind four strings including $Location.
